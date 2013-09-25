@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+
+        <title>Web Scalability</title>
+
+        <meta name="description" content="Web Scaliability talk - MLUG">
+        <meta name="author" content="Darren Wurf">
+
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <link rel="stylesheet" href="css/reveal.min.css">
+        <link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+        <!-- For syntax highlighting -->
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+
+        <!-- If the query includes 'print-pdf', use the PDF print sheet -->
+        <script>
+            document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+        </script>
+
+        <!--[if lt IE 9]>
+        <script src="lib/js/html5shiv.js"></script>
+        <![endif]-->
+    </head>
+
+    <body>
+
+        <div class="reveal">
+
+            <!-- Any section element inside of this container is displayed as a slide -->
+            <div class="slides">
+                <section data-markdown 
+                    data-separator="^----\n"
+                    data-vertical="^\^\^\^\^"
+                    data-notes="^Note:"
+                    >
+                    <script type="text/template">
+                    Web Scalability
+                    ===============
+                    Review of a scaling web architecture
+
+                    Darren Wurf
+                    ----
+                    # Scale-up vs scale-out #
+                    **Scale-up**: Buy bigger machines
+
+                    **Scale-out**: Buy more machines
+
+                    Note: * Scale-up is easier if you are lucky enough to be able to do it
+                    * resource sliders (CPU/memory)
+                    * Scale-up not always possible (resource contention, HA, c20k)
+                    * Scale-out must be designed into the product
+                    ----
+                    # HTTP: the stateless protocol #
+                    * A stateless architecture is easily scalable
+                    * Cookies are used to maintain state between requests
+                    * Sites with a login/password are typically stateful (session credentials)
+                    Note: *"stateless": client makes request web server responds *and forgets*
+                    Examples of state: shopping cart, member area, facebook wall
+                    ----
+                    # HTTP: the stateless protocol #
+                    ![Load Balancer diagram](loadbalancer.png)
+                    Note: * Requests could go to any web server
+                    * Client doesn't know or care which server handled the request
+                    * Next request could go to a different server
+                    ----
+                    # Sessions and caching #
+                    * Multiple web application servers need to share session data
+                    * Store authentication data in a central server (eg LDAP/DB)
+                    * Cache session data on the web server (memcached)
+                    ----
+                    # Other caching #
+                    * Client-side response caching: Last-Modified / E-Tags
+                    * Server-side response caching: memcached
+                    ----
+                    # High availability #
+                    * Stateless architectures can also be made highly available
+                    * Remove all single points of failure
+                    ----
+                    ### Reference architecture ###
+                    ![Rackspace scalable cloud architecture](rackspace_architecture.png)
+
+                    Rackspace Cloud reference architecture, from [Rackspace's documentation][1] (CC by/nc/nd)
+
+                    [1]: http://www.rackspace.com/knowledge_center/article/rackspace-open-cloud-reference-architecture
+                    Note: * Web appliation tier can scale out, failures do not take down system
+                    * Highly available load balancer and database are provided by rackspace
+                    ----
+                    # Case Study: LatLonGO #
+
+                    Note: * Product developed by my employer
+                    * Utility GIS data on your tablet
+                    * For field construction / repair crews
+                    ----
+                    # LatLonGO: Overview #
+                    * Render layers in corporate GIS
+                    * Serve data (usually as deltas) to tablets in the field
+                    * Office workers use web interface
+
+                    Note: * Utilities want to be able to find assets in the field
+                    * Solves the problem of "secure, disconnected access"
+                    * I don't care about the tablet aspect at all
+                    ----
+                    # LatLonGO: Web interface #
+                    * Started as a "preview" for uploaded layers
+                    * Clients liked it
+                    * Web interface must scale to 100s of concurrent users
+
+                    Note: * Must be highly available, 
+                    * 100s of concurrent users == 1000s of requests/sec
+                    ----
+                    # LatLonGO: Technology stack
+                    * Nginx
+                    * Django
+                    * Some C++ magic
+                    Note: Exposed via ctypes
+                    ----
+                    # LatLonGO: Bottleneck #
+                    ## Django ##
+                    Note: tiles
+                    Django can be easily scaled to 100s of req/s
+                    ----
+                    # LatLonGO: Scaling up #
+                    * Expose C++ code as FastCGI
+                    * Cache sessions in memcached
+                    * Cache tiles in memcached (optional)
+                    Note: 
+                    Problem: tile access is not authenticated
+                    nginx module called auth_request - delegate authentication
+                    configuration trickery: can delegate authentication to memcached
+                    ----
+                    # LatLonGO: Scaling out #
+                    * HTTP is stateless
+                    * Django stores session details centrally (DB)
+                    * FastGCI/C++ is stateless
+                    * memcached is stateless
+                    * Copy-paste servers!
+                    Note: we can use a load balancer or round-robin DNS to distribute load
+                    For consistent updates, use an ip-hashing load balancer
+                    ----
+                    # LatLonGO: High availability #
+                    * Load balancer
+                    * Django database
+                    * LDAP
+                    * Layer/tile storage
+                    ----
+                    THE END
+                    =======
+                    Darren Wurf 
+
+                    http://www.latlongo.com/
+
+                    Created using reveal.js
+                    </script>
+                </section>
+
+            </div>
+
+        </div>
+
+        <script src="lib/js/head.min.js"></script>
+        <script src="js/reveal.min.js"></script>
+
+        <script>
+
+            // Full list of configuration options available here:
+            // https://github.com/hakimel/reveal.js#configuration
+            Reveal.initialize({
+                controls: true,
+                progress: true,
+                history: true,
+                center: true,
+
+                theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+                transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+                // Optional libraries used to extend on reveal.js
+                dependencies: [
+                    { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+                    { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+                    { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+                    { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+                ]
+            });
+
+        </script>
+
+    </body>
+</html>
